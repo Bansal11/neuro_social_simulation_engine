@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  neuro-sim:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: neuro-social-sim
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      - PORT=8000
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    restart: unless-stopped
