@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom'
+import React from 'react'
 
 // Mock Three.js WebGL context — jsdom has no WebGL support
 vi.mock('three', async (importOriginal) => {
@@ -20,7 +21,7 @@ vi.mock('@react-three/fiber', async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
-    Canvas: ({ children }) => <div data-testid="r3f-canvas">{children}</div>,
+    Canvas: ({ children }) => React.createElement('div', { 'data-testid': 'r3f-canvas' }, children),
     useFrame: vi.fn(),
     useThree: vi.fn(() => ({ gl: {}, scene: {}, camera: {} })),
   }

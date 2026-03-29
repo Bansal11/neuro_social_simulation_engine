@@ -138,6 +138,7 @@ async def websocket_stream(websocket: WebSocket, simulation_id: str) -> None:
     """
     engine = get_engine(simulation_id)
     if engine is None:
+        await websocket.accept()
         await websocket.close(code=4004, reason="Unknown simulation_id")
         return
 

@@ -4,7 +4,7 @@ Written before implementation (TDD).
 """
 import asyncio
 import json
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -21,6 +21,14 @@ def _make_agents(n: int = 5) -> list:
         )
         for i in range(n)
     ]
+
+
+def _make_mock_manager(active_count: int = 1) -> MagicMock:
+    """Create a mock ConnectionManager with sync active_count and async broadcast."""
+    mgr = MagicMock()
+    mgr.active_count = MagicMock(return_value=active_count)
+    mgr.broadcast = AsyncMock()
+    return mgr
 
 
 @pytest.fixture
@@ -46,17 +54,10 @@ async def test_engine_increments_tick(neural_sig):
         agents=_make_agents(),
     )
 
-    manager = AsyncMock()
-    manager.active_count.return_value = 1
-
-    # Run one iteration by stopping after the first broadcast
-    call_count = 0
+    manager = _make_mock_manager(active_count=1)
 
     async def stop_after_one(sim_id, msg):
-        nonlocal call_count
-        call_count += 1
-        if call_count >= 1:
-            engine.running = False
+        engine.running = False
 
     manager.broadcast.side_effect = stop_after_one
     await engine.run(manager)
@@ -75,8 +76,7 @@ async def test_engine_broadcasts_tick(neural_sig):
         agents=_make_agents(),
     )
 
-    manager = AsyncMock()
-    manager.active_count.return_value = 1
+    manager = _make_mock_manager(active_count=1)
     captured: list[str] = []
 
     async def capture(sim_id, msg):
@@ -105,18 +105,7 @@ async def test_engine_tick_payload_is_valid_simulation_tick(neural_sig):
         agents=_make_agents(),
     )
 
-    manager = AsyncMock()
-    manager.active_count.return_value = 1
-
-    async def stop(sim_id, msg):
-        engine.running = False
-
-    manager.broadcast.side_effect = stop
-    await engine.run(manager)
-
-    # Re-run once more to get the JSON
-    engine.running = True
-    engine.tick = 0
+    manager = _make_mock_manager(active_count=1)
     broadcast_json: list[str] = []
 
     async def capture(sim_id, msg):
@@ -142,11 +131,10 @@ async def test_engine_self_terminates(neural_sig):
         agents=_make_agents(),
     )
 
-    manager = AsyncMock()
-    manager.active_count.return_value = 0  # no clients ever
+    manager = _make_mock_manager(active_count=0)  # no clients ever
 
-    # Patch asyncio.sleep to avoid actual waiting in tests
-    with patch("asyncio.sleep", new=AsyncMock()):
+    # Patch asyncio.sleep inside the engine module to avoid actual waiting
+    with patch("simulation.engine.asyncio.sleep", new=AsyncMock()):
         await engine.run(manager)
 
     assert not engine.running
